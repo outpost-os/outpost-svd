@@ -1,0 +1,50 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  svd-validation:
+    runs-on: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: install python requirements
+      run: pip3 install -r requirements.txt
+    - name: xmlschema-validate
+      run: find . -iname "*.svd" | xargs xmlschema-validate --schema schema/CMSIS-SVD.xsd
+
+  svd-gen:
+    runs-on: [ubuntu-latest]
+    needs: svd-validation
+    strategy:
+      matrix:
+        operating_system: [ 'mesonbuild/fedora:latest', 'mesonbuild/ubuntu-rolling', 'mesonbuild/arch:latest', 'mesonbuild/opensuse:latest' ]
+      fail-fast: false
+    container:
+      image: ${{ matrix.operating_system }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - run: pip3 install -r requirements.txt
+    - name: Fixes dubious of git in github runners
+      run: |
+        git config --global --add safe.directory '*'
+    - name: Meson build
+      run: |
+        meson setup -Dwith-tests-only=true builddir
+        ninja -C builddir test
+    - name: Meson postcheck
+      if: failure()
+      run: |
+        cat builddir/meson-logs/meson-log.txt
+        cat builddir/meson-logs/testlog.txt

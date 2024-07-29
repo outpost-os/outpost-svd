@@ -1,0 +1,153 @@
+// SPDX-License-Identifier: Apache-2.0
+
+/*
+ * Copyright 2023 Ledger SAS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * XXX:
+ *  !!!! Generated header, DO NOT EDIT !!!!
+ */
+#ifndef __{{ name.upper() }}_{{ NAME }}_DEFS_H
+#define __{{ name.upper() }}_{{ NAME }}_DEFS_H
+
+#include <assert.h>
+#include <inttypes.h>
+
+{% set peripheral = (peripherals|selectattr('groupName', 'eq', NAME)|first) or (peripherals|selectattr('name', 'eq', NAME)|first) -%}
+{% for register in peripheral.registers -%}
+
+{% if register.size == 32 -%}
+{% set literal_suffix = "UL" -%}
+{% elif register.size == 64 -%}
+{% set literal_suffix = "ULL" -%}
+{% else -%}
+{% set literal_suffix = "" -%}
+{% endif -%}
+
+/**
+ *  @brief {{ NAME }} {{ register.name.upper() }} register
+ {%- if register.description is defined %}
+ *
+ * {{ " ".join(register.description.split()) }}
+ *
+ {%- endif %}
+ *  @note offset: {{ "%#x"|format(register.addressOffset) }}{{ literal_suffix }}
+ *        width:  {{ register.size }} bits
+ */
+#define {{ NAME }}_{{ register.name.upper() }}_REG  {{ "%#x"|format(register.addressOffset) }}{{ literal_suffix }}
+
+{# Here, we fill a list with field name and bitsize to generate a struct -#}
+{# Automatically adds padding fields while needed -#}
+{% set struct = namespace() -%}
+{% set struct.field_list = [] -%}
+{% set struct.padding_index = 0 -%}
+{% set struct.current_offset = 0 -%}
+
+{% for field in register.fields|sort(attribute="bitOffset")-%}
+
+{# XXX Some field do not define 'access' right -#}
+{% set field_access = field.access or "read-write" -%}
+{% set field_base_name = "%s_%s_%s"|format(NAME, register.name.upper(), field.name.upper()) -%}
+{% set field_bit_offset = "%#x%s"|format(field.bitOffset, literal_suffix) -%}
+
+{% if field.bitOffset != struct.current_offset -%}
+{% set pad_size = field.bitOffset - struct.current_offset -%}
+{% set pad_name = "reserved%d"|format(struct.padding_index) -%}
+{% set _ = struct.field_list.append((pad_name, pad_size)) -%}
+{% set struct.padding_index = struct.padding_index + 1 -%}
+{% set struct.current_offset = struct.current_offset + pad_size -%}
+{% endif -%}
+
+{% set _ = struct.field_list.append((field.name.lower(), field.bitWidth)) -%}
+{% set struct.current_offset = struct.current_offset + field.bitWidth -%}
+
+/**
+ * @brief {{ NAME }} {{ register.name.upper() }} {{ field.name.upper() }} field
+ {%- if field.description is defined %}
+ *
+ * {{ " ".join(field.description.split()) }}
+ *
+ {%- endif %}
+ * @note offset: {{ "%#x"|format(field.bitOffset) }}{{ literal_suffix }}
+ *       width:  {{ field.bitWidth }}
+ *       access: {{ field_access }}
+ */
+{% if field.bitWidth == 1 -%}
+#define {{ field_base_name }} (1{{literal_suffix}} << {{ field_bit_offset }})
+{% endif -%}
+#define {{ field_base_name }}_SHIFT {{ field_bit_offset }}
+#define {{ field_base_name }}_MASK (((1ULL << {{ field.bitWidth }}) - 1) << {{ field_base_name }}_SHIFT)
+{% endfor %}
+
+{% set register_struct_name = "%s_%s"|format(NAME.lower(), register.name.lower()) -%}
+struct {{ register_struct_name }} {
+    {% for field_name, field_width in  struct.field_list -%}
+    uint{{ register.size }}_t {{ field_name }}:{{ field_width }};
+    {% endfor -%}
+};
+
+typedef struct {{ register_struct_name }} {{ register_struct_name }}_t;
+static_assert(sizeof({{ register_struct_name }}_t) == sizeof(uint{{ register.size }}_t), "Invalid register description");
+
+{% endfor -%}
+
+/*@
+
+    predicate {{ NAME.lower() }}_is_writable_register(ℤ r) = (
+        {% for register in peripheral.registers -%}
+        {% set ns = namespace(reg_rw_access = 0) -%}
+        {% for field in register.fields|sort(attribute="bitOffset")-%}
+        {# XXX Some field do not define 'access' right -#}
+        {% set field_access = field.access or "read-write" -%}
+        {% if field_access == "read-write" -%}
+        {% set ns.reg_rw_access = 1 -%}
+        {% endif -%}
+        {% endfor -%}
+        {% if ns.reg_rw_access == 1 -%}
+        r == {{ "%#x"|format(register.addressOffset) }}{{ literal_suffix }} ||
+        {% endif -%}
+        {% endfor -%}
+        \false
+    );
+
+    predicate {{ NAME.lower() }}_is_readable_register(ℤ r) = (
+        {% for register in peripheral.registers -%}
+        {% set ns = namespace(reg_r_access = 0) -%}
+        {% for field in register.fields|sort(attribute="bitOffset")-%}
+        {# XXX Some field do not define 'access' right -#}
+        {% set field_access = field.access or "read-write" -%}
+        {% if field_access == "read-write" or field_access == "read-only" -%}
+        {% set ns.reg_r_access = 1 -%}
+        {% endif -%}
+        {% endfor -%}
+        {% if ns.reg_r_access == 1 -%}
+        r == {{ "%#x"|format(register.addressOffset) }}{{ literal_suffix }} ||
+        {% endif -%}
+        {% endfor -%}
+        \false
+    );
+
+    predicate {{ NAME.lower() }}_register_exists(ℤ r) = (
+        {% for register in peripheral.registers -%}
+        r == {{ "%#x"|format(register.addressOffset) }}{{ literal_suffix }} ||
+        {% endfor -%}
+        \false
+    );
+
+
+*/
+
+#endif /* __{{ name.upper() }}_{{ NAME }}_DEFS_H */

@@ -1,0 +1,6 @@
+meson
+xmlschema
+svd2json>=0.1.6
+jinja2
+jinja-cli
+dunamai
