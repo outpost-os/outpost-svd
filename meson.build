@@ -20,7 +20,7 @@ project(
     version: run_command('dunamai', 'from', 'git', '--style', 'semver', '--dirty', check: true)
              .stdout().strip(),
     license: 'Apache-2.0',
-    license_files: ['LICENSE'],
+    license_files: ['LICENSES/Apache-2.0.txt'],
 )
 
 pymod = import('python')

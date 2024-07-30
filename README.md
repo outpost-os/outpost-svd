@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2024 Ledger SAS
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # outpost-svd
 Collection of SVD files with meson recipe to handle them
 
