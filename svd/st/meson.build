@@ -46,4 +46,5 @@ svd_files += files(
     'stm32wl5x_cm0p.svd',
     'stm32wl5x_cm4.svd',
     'stm32wle5_cm4.svd',
+    'stm32h743.svd',
 )
