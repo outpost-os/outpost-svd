@@ -20,13 +20,17 @@
  * XXX:
  *  !!!! Generated header, DO NOT EDIT !!!!
  */
+
 #ifndef __{{ name.upper() }}_{{ NAME }}_DEFS_H
 #define __{{ name.upper() }}_{{ NAME }}_DEFS_H
 
 #include <assert.h>
 #include <inttypes.h>
 
-{% set peripheral = (peripherals|selectattr('groupName', 'eq', NAME)|first) or (peripherals|selectattr('name', 'eq', NAME)|first) -%}
+{#- XXX: peripheral name are not consistent, need to provide higher lever tool for svd (...) #}
+{%- set name_seq = [NAME, NAME.lower(), NAME.capitalize()] %}
+
+{% set peripheral = (peripherals|selectattr('groupName', 'in', name_seq)|first) or (peripherals|selectattr('name', 'in', name_seq)|first) -%}
 {% for register in peripheral.registers -%}
 
 {% if register.size == 32 -%}
