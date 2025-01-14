@@ -79,5 +79,5 @@ svd_files += files(
 
 install_data(
   svd_files,
-  install_dir : 'share/svd/st'
+  install_dir :  get_option('datadir') + '/svd/st'
 )
