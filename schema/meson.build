@@ -20,5 +20,5 @@ schema_files = files(
 
 install_data(
   schema_files,
-  install_dir : 'share/svd/schemas'
+  install_dir :  get_option('datadir') + '/svd/schemas'
 )
