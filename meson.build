@@ -34,6 +34,7 @@ svd_opt = get_option('svd')
 
 subdir('template')
 subdir('svd')
+subdir('schema')
 
 if not get_option('with-tests-only')
     foreach f : svd_files
